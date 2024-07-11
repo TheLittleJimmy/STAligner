@@ -184,7 +184,7 @@ def train_STAligner(adata, hidden_dims=[512, 30], n_epochs=1000, lr=0.001, key_a
             adata.obsm['STAGATE'] = z.cpu().detach().numpy()
 
             # If knn_neigh>1, points in one slice may have multiple MNN points in another slice.
-            # not all points have MNN achors
+            # not all points have MNN anchors
             mnn_dict = create_dictionary_mnn(adata, use_rep='STAGATE', batch_name='batch_name', k=knn_neigh,
                                                        iter_comb=iter_comb, verbose=0)
 
