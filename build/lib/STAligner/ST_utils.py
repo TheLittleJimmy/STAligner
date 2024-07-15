@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import sklearn.neighbors
 import networkx as nx
-from .mnn_utils import create_dictionary_mnn
+from mnn_utils import create_dictionary_mnn
 
 def match_cluster_labels(true_labels,est_labels):
     true_labels_arr = np.array(list(true_labels))

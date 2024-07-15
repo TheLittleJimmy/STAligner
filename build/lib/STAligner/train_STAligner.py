@@ -3,8 +3,8 @@ import pandas as pd
 from tqdm import tqdm
 import scipy.sparse as sp
 
-from .mnn_utils import create_dictionary_mnn
-from .STALIGNER import STAligner
+from mnn_utils import create_dictionary_mnn
+from STALIGNER import STAligner
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -65,8 +65,6 @@ def train_STAGATE(adata, hidden_dims=[512, 30], n_epochs=1000, lr=0.001, key_add
 
     if verbose:
         print('Size of Input: ', adata_Vars.shape)
-    if 'Spatial_Net' not in adata.uns.keys():
-        raise ValueError("Spatial_Net is not existed! Run Cal_Spatial_Net first!")
 
     data = Transfer_pytorch_Data(adata_Vars)
 
@@ -101,6 +99,45 @@ def train_STAGATE(adata, hidden_dims=[512, 30], n_epochs=1000, lr=0.001, key_add
 
     return adata
 
+def train_ST2Align(adata, hidden_dims=[512, 30], n_epochs=1000, lr=0.001, key_added='ST2Align', weight_decay=0.0001, verbose=False,
+                    random_seed=666, device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')):
+
+    seed = random_seed
+    import random
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+
+    section_ids = np.array(adata.obs['batch_name'].unique())
+    edgeList = adata.uns['edgeList']
+    data = Data(edge_index=torch.LongTensor(np.array([edgeList[0], edgeList[1]])),
+                prune_edge_index=torch.LongTensor(np.array([])),
+                x=torch.FloatTensor(adata.X.todense()))
+    data = data.to(device)
+
+    model = STAligner(hidden_dims=[data.x.shape[1], hidden_dims[0], hidden_dims[1]]).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    if verbose:
+        print(model)
+
+    print('Pretrain with STAGATE...')
+    for epoch in tqdm(range(0, n_epochs)):
+        model.train()
+        optimizer.zero_grad()
+        z, out = model(data.x, data.edge_index)
+
+        loss = F.mse_loss(data.x, out)
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 5.)
+        optimizer.step()
+
+    model.eval()
+    z, out = model(data.x, data.edge_index)
+    STAGATE_rep = z.to('cpu').detach().numpy()
+    adata.obsm[key_added] = STAGATE_rep
+
+    return adata
 
 def train_STAligner(adata, hidden_dims=[512, 30], n_epochs=1000, lr=0.001, key_added='STAligner',
                     gradient_clipping=5., weight_decay=0.0001, margin=1.0, verbose=False,
@@ -184,7 +221,7 @@ def train_STAligner(adata, hidden_dims=[512, 30], n_epochs=1000, lr=0.001, key_a
             adata.obsm['STAGATE'] = z.cpu().detach().numpy()
 
             # If knn_neigh>1, points in one slice may have multiple MNN points in another slice.
-            # not all points have MNN achors
+            # not all points have MNN anchors
             mnn_dict = create_dictionary_mnn(adata, use_rep='STAGATE', batch_name='batch_name', k=knn_neigh,
                                                        iter_comb=iter_comb, verbose=0)
 
