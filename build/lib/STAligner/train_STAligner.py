@@ -3,8 +3,8 @@ import pandas as pd
 from tqdm import tqdm
 import scipy.sparse as sp
 
-from mnn_utils import create_dictionary_mnn
-from STALIGNER import STAligner
+from .mnn_utils import create_dictionary_mnn
+from .STALIGNER import STAligner
 
 import torch
 import torch.backends.cudnn as cudnn
