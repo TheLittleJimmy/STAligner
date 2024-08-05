@@ -143,7 +143,7 @@ def train_STAligner(adata, hidden_dims=[512, 30], n_epochs=1000, lr=0.001, key_a
                     gradient_clipping=5., weight_decay=0.0001, margin=1.0, verbose=False,
                     random_seed=666, iter_comb=None, knn_neigh=100,
                     device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')):
-    """\
+    """
     Train graph attention auto-encoder and use spot triplets across slices to perform batch correction in the embedding space.
 
     Parameters
